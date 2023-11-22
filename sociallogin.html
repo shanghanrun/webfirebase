@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Login</title>
+</head>
+<style>
+    .spacing {
+        margin-bottom: 20px;
+    }
+</style>
+
+<body>
+    <form action="">
+        <h1>회원가입</h1>
+        <div>email : <input type="email" id="signupEmail" /></div>
+        <div>password : <input type="password" id="signupPassword" /></div>
+        <button type="submit" id="signupButton">회원가입하기</button>
+        <button id="gotoLogin">로그인하러 가기</button>
+    </form>
+    <div class="spacing"></div>
+
+    <form id='loginForm' action="">
+        <h1>로그인 하기</h1>
+        <div>email : <input type="email" id="loginEmail" /></div>
+        <div>password : <input type="password" id="loginPassword" /></div>
+        <button type="submit" id="loginButton">로그인하기</button>
+        <button id="gotoSignup">회원가입하러 가기</button>
+    </form>
+    <div class="spacing"></div>
+
+
+
+    <button id="googleLogin">구글 아이디로 로그인</button>
+    <div class="spacing"></div>
+
+    <form action="">
+        핸드폰 번호 : <input id="phoneNumber" />
+        <button id="phoneNumberButton">번호전송</button>
+    </form>
+    <form action="">
+        확인 코드 : <input id="confirmCode" />
+        <button id="confirmCodeButton">코드전송</button>
+    </form>
+
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCNjjyaknJQdpdHqQHM4dNmHyCOsb_i_qg",
+            authDomain: "chatapp-717dd.firebaseapp.com",
+            projectId: "chatapp-717dd",
+            storageBucket: "chatapp-717dd.appspot.com",
+            messagingSenderId: "938673248879",
+            appId: "1:938673248879:web:8b683531f4624d647b8b9a"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signInWithPhoneNumber, GoogleAuthProvider, RecaptchaVerifier } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
+        const provider = new GoogleAuthProvider();
+        const auth = getAuth();
+        auth.languageCode = 'ko'; // 한글 랭귀지코드
+
+
+        document.getElementById('signupButton').addEventListener('click', (event) => {
+            event.preventDefault();
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+
+            createUserWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    console.log(userCredential);
+                })
+                .catch((error) => {
+                    const errorCode = error.code;
+                    const errorMessage = error.message;
+                    console.log(errorMessage);
+                });
+        });
+        document.getElementById('loginButton').addEventListener('click', (event) => {
+            event.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            signInWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    console.log(userCredential);
+                    window.location.href = 'home.html';  //성공시 이동
+                })
+                .catch((error) => {
+                    const errorCode = error.code;
+                    const errorMessage = error.message;
+                    console.log(errorMessage);
+
+                    //실패시 입력값들 지우고, 이메일 란으로 가기
+                    document.getElementById('loginForm').reset();
+                    document.getElementById('loginEmail').focus();
+                });
+        });
+
+
+
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'phoneNumberButton', {
+            'size': 'invisible',
+            'callback': (response) => {
+                // reCAPTCHA solved, allow signInWithPhoneNumber.
+                onSignInSubmit();
+            }
+        });
+
+
+
+        document.getElementById('phoneNumberButton').addEventListener('click', (event) => {
+            event.preventDefault() // 폼을 전송하는 버튼을 누르면 화면갱신된다. 화면갱신되지 않도록
+
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            const appVerifier = window.recaptchaVerifier;
+            signInWithPhoneNumber(auth, "+82" + phoneNumber, appVerifier)
+                .then((confirmationResult) => {
+                    window.confirmationResult = confirmationResult;
+                    console.log(confirmationResult);
+                }).catch((error) => {
+                    console.log(error);
+                });
+
+        });
+
+        document.getElementById('confirmCodeButton').addEventListener('click', (event) => {
+            event.preventDefault();
+            const code = document.getElementById('confirmCode').value;
+            confirmationResult.confirm(code).then((result) => {
+                const user = result.user;
+                console.log(result);
+            }).catch((error) => {
+                console.log(error);
+            });
+        });
+
+        document.getElementById('googleLogin').addEventListener('click', () => {
+            signInWithPopup(auth, provider)
+                .then((result) => {
+                    // This gives you a Google Access Token. You can use it to access the Google API.
+                    const credential = GoogleAuthProvider.credentialFromResult(result);
+                    const token = credential.accessToken;
+                    // The signed-in user info.
+                    const user = result.user;
+                    console.log(result);
+                    // ...
+                }).catch((error) => {
+                    // Handle Errors here.
+                    const errorCode = error.code;
+                    const errorMessage = error.message;
+                    // The email of the user's account used.
+                    const email = error.customData.email;
+                    // The AuthCredential type that was used.
+                    const credential = GoogleAuthProvider.credentialFromError(error);
+                    console.log(error);
+                    // ...
+                });
+        })
+
+        document.getElementById('gotoLogin').addEventListener('click', function (event) {
+            event.preventDefault();  //form 안의 버튼은 항상 새 페이지를 만들려 한다.
+            document.getElementById('loginEmail').focus();
+        });
+
+        document.getElementById('gotoSignup').addEventListener('click', function (event) {
+            event.preventDefault();
+            document.getElementById('signupEmail').focus();
+        });
+
+
+    </script>
+</body>
+
+</html>
